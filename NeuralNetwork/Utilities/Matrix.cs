@@ -32,6 +32,18 @@ namespace NeuralNetwork.Utilities
             return product;
         }
 
+        public static double[,] Sum(double[,] matrix, double value)
+        {
+            for (int i = 0; i < matrix.GetLength(0); i++)
+            {
+                for (int j = 0; j < matrix.GetLength(1); j++)
+                {
+                    matrix[i, j] += value;
+                }
+            }
+            return matrix; //TODO: Check this is necessary or its being done by reference already ;)
+        }
+
         private static bool IsGeoEquivalent(double[,] matrixA, double[,] matrixB)
         {
             return matrixA.GetLength(1) == matrixB.GetLength(0) ? true : false;
