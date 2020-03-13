@@ -14,10 +14,10 @@ namespace NeuralNetwork
         public List<Layer> Hiddens { get; private set; }
         public Layer Outputs { get; private set; }
 
+        public int MutationRate { get; set; }
         private float[,] WeightsIH;
         private List<float[,]> WeightsH;
         private float[,] WeightsHO;
-
         private float[,] Bias;
 
         private delegate float ActivateFunction(float number);
@@ -31,6 +31,20 @@ namespace NeuralNetwork
                 Hiddens.Add(new Layer(hiddenLayerSize));
             }
             Outputs = new Layer(outputLayerSize);
+        }
+
+        public NeuralNetwork(NeuralNetwork neuralNetwork)
+        { 
+            Inputs = new Layer(neuralNetwork.Inputs.size);
+            Hiddens = new List<Layer>(neuralNetwork.Hiddens);
+            Outputs = new Layer(neuralNetwork.Outputs.size);
+
+            MutationRate = neuralNetwork.MutationRate;
+            WeightsIH = neuralNetwork.WeightsIH.Clone() as float[,];
+            WeightsHO = neuralNetwork.WeightsHO.Clone() as float[,];
+            WeightsH = new List<float[,]>(neuralNetwork.WeightsH);
+
+            Bias = neuralNetwork.Bias.Clone() as float[,];
         }
 
         public void DefineAndPopulateWeights()
@@ -117,6 +131,7 @@ namespace NeuralNetwork
                 }
             }
         }
+        
         private Layer ApplyActivationFunction(Layer layer, ActivateFunction activateFunction)
         {
             var result = new Layer(layer.size);
@@ -124,6 +139,45 @@ namespace NeuralNetwork
                 result.Items[i] = activateFunction(layer.Items[i]);
             }
             return result;
+        }
+
+        private bool Mutate()
+        {
+            if(Task.Run(() => ApplyMutation(WeightsIH)).Result)
+            {
+                return true;
+            }
+            if (Task.Run(() => ApplyMutation(WeightsHO)).Result)
+            {
+                return true;
+            }
+
+            foreach (var weight in WeightsH)
+            {
+                if (Task.Run(() => ApplyMutation(weight)).Result)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private bool ApplyMutation(float[,] weights)
+        {
+            Random random = new Random();
+            for (int i = 0; i < weights.GetLength(0); i++)
+            {
+                for (int j = 0; j < weights.GetLength(1); j++)
+                {
+                    if(random.Next(100) <= MutationRate)
+                    {
+                        random = new Random();
+                        weights[i,j] = Convert.ToSingle(random.NextDouble()) * (1.0f - 0.0f);
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         public class Layer
