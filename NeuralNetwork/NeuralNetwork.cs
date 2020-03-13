@@ -11,7 +11,7 @@ namespace NeuralNetwork
     public class NeuralNetwork
     {
         public Layer Inputs { get; private set; }
-        public Layer[] Hiddens { get; private set; }
+        public List<Layer> Hiddens { get; private set; }
         public Layer Outputs { get; private set; }
 
         private float[,] WeightsIH;
@@ -25,9 +25,11 @@ namespace NeuralNetwork
         public NeuralNetwork(int inputLayerSize, int hiddenLayerSize, int outputLayerSize, int hiddenLayerDepth = 1)
         {
             Inputs = new Layer(inputLayerSize);
-            var hiddenSize = new Layer(hiddenLayerSize);
-            var hiddenDepth = new Layer(hiddenLayerDepth);
-            Hiddens = new Layer[] { hiddenSize, hiddenDepth };
+            Hiddens = new List<Layer>();
+            for(int i = 0; i < hiddenLayerDepth; i++)
+            {
+                Hiddens.Add(new Layer(hiddenLayerSize));
+            }
             Outputs = new Layer(outputLayerSize);
         }
 
@@ -48,7 +50,7 @@ namespace NeuralNetwork
             else
             {
                 WeightsH = new List<float[,]>();
-                for (int x = 0; x < hiddenLayerDepth; x++)
+                for (int x = 0; x < hiddenLayerDepth-1; x++)
                 {
                     WeightsH.Add(new float[hiddenLayerSize, hiddenLayerSize]);
                 }
@@ -60,13 +62,12 @@ namespace NeuralNetwork
         public void FeedForward(float[] inputs)
         {
             ActivateFunction activateFunction = ActivateFunctions.Sigmoid;
-
-            Hiddens[0] = ApplyActivationFunction(Task.Run(() => Feed(WeightsH[0], Matrix.ArrayToMatrix(inputs), Bias[0,0])).Result, activateFunction);
-            for(int i = 1; i < Hiddens.Count(); i++)
+            Hiddens[0] = ApplyActivationFunction(Task.Run(() => Feed(WeightsIH, Matrix.ArrayToMatrix(inputs), Bias[0,0])).Result, activateFunction);
+            for(int i = 0; i < Hiddens.Count()-1; i++)
             {
-                Hiddens[i] = ApplyActivationFunction(Task.Run(() => Feed(WeightsH[i], Matrix.ArrayToMatrix(Hiddens[i-1].Items), Bias[i, 0])).Result, activateFunction);
+                Hiddens[i+1] = ApplyActivationFunction(Task.Run(() => Feed(WeightsH[i], Matrix.ArrayToMatrix(Hiddens[i].Items), Bias[i+1, 0])).Result, activateFunction);
             }
-            var lastBias = Bias.GetLength(0);
+            var lastBias = Bias.GetLength(0)-1;
             Outputs = ApplyActivationFunction(Task.Run(() => Feed(WeightsHO, Matrix.ArrayToMatrix(Hiddens.LastOrDefault().Items), Bias[lastBias, 0])).Result, activateFunction);
         }
 
@@ -112,7 +113,7 @@ namespace NeuralNetwork
                 for (int y = 0; y < item.GetLength(1); y++)
                 {
                     var random = new Random();
-                    item[x, y] = GenerateRandomNumber(random, 1, -1);
+                    item[x, y] = GenerateRandomNumber(random, 0.0f, 0.06f);
                 }
             }
         }
