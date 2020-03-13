@@ -1,6 +1,9 @@
-﻿using System;
+﻿using NeuralNetwork.Utilities;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace NeuralNetwork
@@ -11,9 +14,13 @@ namespace NeuralNetwork
         public Layer[] Hiddens { get; private set; }
         public Layer Outputs { get; private set; }
 
-        private double[,] WeightsIH;
-        private List<double[,]> WeightsH;
-        private double[,] WeightsHO;
+        private float[,] WeightsIH;
+        private List<float[,]> WeightsH;
+        private float[,] WeightsHO;
+
+        private float[,] Bias;
+
+        private delegate float ActivateFunction(float number);
 
         public NeuralNetwork(int inputLayerSize, int hiddenLayerSize, int outputLayerSize, int hiddenLayerDepth = 1)
         {
@@ -31,21 +38,42 @@ namespace NeuralNetwork
             int outputLayerSize = Outputs.size;
             int hiddenLayerDepth = Hiddens[1].size;
 
-            WeightsIH = new double[hiddenLayerSize, inputLayerSize];
+            WeightsIH = new float[hiddenLayerSize, inputLayerSize];
+            Bias = new float[hiddenLayerDepth + 1, 1];
+
             if(hiddenLayerDepth == 1)
             {
                 WeightsH = null;
             }
             else
             {
-                WeightsH = new List<double[,]>();
+                WeightsH = new List<float[,]>();
                 for (int x = 0; x < hiddenLayerDepth; x++)
                 {
-                    WeightsH.Add(new double[hiddenLayerSize, hiddenLayerSize]);
+                    WeightsH.Add(new float[hiddenLayerSize, hiddenLayerSize]);
                 }
             }
-            WeightsHO = new double[outputLayerSize, hiddenLayerSize];
+            WeightsHO = new float[outputLayerSize, hiddenLayerSize];
             Task.Run(async () => await InitializeWeights()).Wait();
+        }
+
+        public void FeedForward(float[] inputs)
+        {
+            ActivateFunction activateFunction = ActivateFunctions.Sigmoid;
+
+            Hiddens[0] = ApplyActivationFunction(Task.Run(() => Feed(WeightsH[0], Matrix.ArrayToMatrix(inputs), Bias[0,0])).Result, activateFunction);
+            for(int i = 1; i < Hiddens.Count(); i++)
+            {
+                Hiddens[i] = ApplyActivationFunction(Task.Run(() => Feed(WeightsH[i], Matrix.ArrayToMatrix(Hiddens[i-1].Items), Bias[i, 0])).Result, activateFunction);
+            }
+            var lastBias = Bias.GetLength(0);
+            Outputs = ApplyActivationFunction(Task.Run(() => Feed(WeightsHO, Matrix.ArrayToMatrix(Hiddens.LastOrDefault().Items), Bias[lastBias, 0])).Result, activateFunction);
+        }
+
+        private Layer Feed(float[,] weightsA, float[,] weightsB, float bias)
+        {
+            var product = Matrix.Sum(Matrix.DotProduct(weightsA, weightsB), bias);
+            return new Layer(product.GetLength(0)) { Items = Matrix.MatrixToArray(product) };
         }
 
         private async Task InitializeWeights()
@@ -53,14 +81,15 @@ namespace NeuralNetwork
             // Multithreading for populating the matrices
             List<Task> tasks = new List<Task>
             {
-                new Task(() => PoulateArrayRandomly(ref WeightsIH)),
-                new Task(() => PoulateArrayRandomly(ref WeightsHO))
+                new Task(() => PoulateMatrixRandomly(ref WeightsIH)),
+                new Task(() => PoulateMatrixRandomly(ref WeightsHO)),
+                new Task(() => PoulateMatrixRandomly(ref Bias))
             };
 
             for(int x = 0; x < WeightsH.Count(); x++)
             {
                 var z = WeightsH[x];
-                tasks.Add(new Task(() => PoulateArrayRandomly(ref z)));
+                tasks.Add(new Task(() => PoulateMatrixRandomly(ref z)));
             }
 
             foreach(var task in tasks)
@@ -71,12 +100,12 @@ namespace NeuralNetwork
             await Task.WhenAll(tasks);
         }
 
-        private double GenerateRandomNumber(Random random, double minimum, double maximum)
+        private float GenerateRandomNumber(Random random, float minimum, float maximum)
         {
-            return random.NextDouble() * (maximum - minimum) + minimum;
+            return Convert.ToSingle(random.NextDouble()) * (maximum - minimum) + minimum;
         }
 
-        private void PoulateArrayRandomly(ref double[,] item)
+        private void PoulateMatrixRandomly(ref float[,] item)
         {
             for(int x = 0; x < item.GetLength(0); x++)
             {
@@ -87,14 +116,22 @@ namespace NeuralNetwork
                 }
             }
         }
+        private Layer ApplyActivationFunction(Layer layer, ActivateFunction activateFunction)
+        {
+            var result = new Layer(layer.size);
+            for(int i= 0; i < layer.size; i++) {
+                result.Items[i] = activateFunction(layer.Items[i]);
+            }
+            return result;
+        }
 
         public class Layer
         {
-            public double[] Items { get; private set; }
+            public float[] Items { get; set; }
             public int size { get; private set; }
             public Layer(int size)
             {
-                Items = new double[size];
+                Items = new float[size];
                 this.size = size;
             }
 
