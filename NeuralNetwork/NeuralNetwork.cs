@@ -20,6 +20,8 @@ namespace NeuralNetwork
         private float[,] WeightsHO;
         private float[,] Bias;
 
+        public int Mutations { get; private set; }
+
         private delegate float ActivateFunction(float number);
 
         public NeuralNetwork(int inputLayerSize, int hiddenLayerSize, int outputLayerSize, int hiddenLayerDepth = 1)
@@ -31,6 +33,7 @@ namespace NeuralNetwork
                 Hiddens.Add(new Layer(hiddenLayerSize));
             }
             Outputs = new Layer(outputLayerSize);
+            Mutations = 0;
         }
 
         public NeuralNetwork(NeuralNetwork neuralNetwork)
@@ -44,7 +47,13 @@ namespace NeuralNetwork
             WeightsHO = neuralNetwork.WeightsHO.Clone() as float[,];
             WeightsH = new List<float[,]>(neuralNetwork.WeightsH);
 
+            Mutations = neuralNetwork.Mutations;
+
             Bias = neuralNetwork.Bias.Clone() as float[,];
+            if (Mutate())
+            {
+                Mutations++;
+            }
         }
 
         public void DefineAndPopulateWeights()
