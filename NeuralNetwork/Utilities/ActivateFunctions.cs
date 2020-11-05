@@ -8,6 +8,8 @@ namespace NeuralNetwork.Utilities
 {
     internal static class ActivateFunctions
     {
+        //Currently this DLL only works for x64 bits CPU platform applications
+        //TODO: Compile other C++ DLLs for better compatibility
         [DllImport("activationFunctions.dll", CallingConvention = CallingConvention.Cdecl)]
         private extern static float sigmoid(float x);
 

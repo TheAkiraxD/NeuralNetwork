@@ -10,6 +10,8 @@ namespace NeuralNetwork
 {
     public class NeuralNetwork
     {
+        private const float WEIGHT_THRESHOLD_MIN = -0.8f;
+        private const float WEIGHT_THRESHOLD_MAX = 0.8f;
         public Layer Inputs { get; private set; }
         public List<Layer> Hiddens { get; private set; }
         public Layer Outputs { get; private set; }
@@ -136,7 +138,7 @@ namespace NeuralNetwork
                 for (int y = 0; y < item.GetLength(1); y++)
                 {
                     var random = new Random();
-                    item[x, y] = GenerateRandomNumber(random, 0.0f, 0.06f);
+                    item[x, y] = GenerateRandomNumber(random, WEIGHT_THRESHOLD_MIN, WEIGHT_THRESHOLD_MAX);
                 }
             }
         }
@@ -181,7 +183,7 @@ namespace NeuralNetwork
                     if(random.Next(100) <= MutationRate)
                     {
                         random = new Random();
-                        weights[i,j] = Convert.ToSingle(random.NextDouble()) * (1.0f - 0.0f);
+                        weights[i,j] = Convert.ToSingle(random.NextDouble()) * (WEIGHT_THRESHOLD_MIN - WEIGHT_THRESHOLD_MAX);
                         return true;
                     }
                 }
